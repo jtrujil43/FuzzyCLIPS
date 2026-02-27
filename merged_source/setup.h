@@ -1,7 +1,8 @@
    /*******************************************************/
    /*      "C" Language Integrated Production System      */
    /*                                                     */
-   /*             CLIPS Version 6.41  05/10/21            */
+   /*        FuzzyCLIPS Version 6.42a  02/26/26           */
+   /*        (Based on CLIPS Version 6.42 01/14/25)       */
    /*                                                     */
    /*                  SETUP HEADER FILE                  */
    /*******************************************************/
@@ -16,6 +17,10 @@
 /* Principal Programmer(s):                                  */
 /*      Gary D. Riley                                        */
 /*      Brian L. Dantes                                      */
+/*      Bob Orchard (NRCC - Nat'l Research Council of Canada)*/
+/*                  (Fuzzy reasoning extensions)             */
+/*                  (certainty factors for facts and rules)  */
+/*                  (extensions to run command)              */
 /*                                                           */
 /* Contributing Programmer(s):                               */
 /*                                                           */
@@ -204,6 +209,36 @@
 #if ! DEFRULE_CONSTRUCT
 #undef DEFTEMPLATE_CONSTRUCT
 #define DEFTEMPLATE_CONSTRUCT 0
+#endif
+
+/**************************************************/
+/* FUZZY_DEFTEMPLATES:  Determines whether fuzzy  */
+/*   facts are included.                          */
+/*   (Added at NRCC for FuzzyCLIPS)               */
+/**************************************************/
+
+#ifndef FUZZY_DEFTEMPLATES
+#define FUZZY_DEFTEMPLATES 1
+#endif
+
+#if ! DEFTEMPLATE_CONSTRUCT
+#undef  FUZZY_DEFTEMPLATES
+#define FUZZY_DEFTEMPLATES 0
+#endif
+
+/****************************************************/
+/* CERTAINTY_FACTORS:  Determines whether certainty */
+/*   factors for facts and rules are included.      */
+/*   (Added at NRCC for FuzzyCLIPS)                 */
+/****************************************************/
+
+#ifndef CERTAINTY_FACTORS
+#define CERTAINTY_FACTORS 1
+#endif
+
+#if ! DEFRULE_CONSTRUCT
+#undef  CERTAINTY_FACTORS
+#define CERTAINTY_FACTORS 0
 #endif
 
 /************************************************************/

@@ -47,6 +47,16 @@
 #include <stdint.h>
 #include <limits.h>
 
+/* If FUZZY_DEFTEMPLATES hasn't been defined yet (constant.h is included
+   before setup.h in some paths), default to 0. setup.h will override. */
+#ifndef FUZZY_DEFTEMPLATES
+#define FUZZY_DEFTEMPLATES 0
+#endif
+
+#ifndef CERTAINTY_FACTORS
+#define CERTAINTY_FACTORS 0
+#endif
+
 #define EXACTLY       0
 #define AT_LEAST      1
 #define NO_MORE_THAN  2
@@ -105,23 +115,23 @@ typedef enum
   } GetSlotError;
 
 #ifndef APPLICATION_NAME
-#define APPLICATION_NAME "CLIPS"
+#define APPLICATION_NAME "FuzzyCLIPS"
 #endif
 
 #ifndef COMMAND_PROMPT
-#define COMMAND_PROMPT "CLIPS> "
+#define COMMAND_PROMPT "FuzzyCLIPS> "
 #endif
 
 #ifndef VERSION_STRING
-#define VERSION_STRING "6.4.2"
+#define VERSION_STRING "6.42a"
 #endif
 
 #ifndef CREATION_DATE_STRING
-#define CREATION_DATE_STRING "1/14/25"
+#define CREATION_DATE_STRING "02/26/26"
 #endif
 
 #ifndef BANNER_STRING
-#define BANNER_STRING "         CLIPS (6.4.2 1/14/25)\n"
+#define BANNER_STRING "     FuzzyCLIPS (6.42a 02/26/26)\n"
 #endif
 
 /*************************/
@@ -145,6 +155,9 @@ typedef enum
 #define INSTANCE_NAME_TYPE_NAME        "INSTANCE-NAME"
 #define INSTANCE_ADDRESS_TYPE_NAME     "INSTANCE-ADDRESS"
 
+/* FUZZY extensions */
+#define FUZZY_VALUE_NAME               "FUZZY-VALUE"
+
 /*************************************************************************/
 /* The values of these constants should not be changed.  They are set to */
 /* start after the primitive type codes in CONSTANT.H.  These codes are  */
@@ -152,12 +165,23 @@ typedef enum
 /* present or not.                                                       */
 /*************************************************************************/
 
+/* NOTE: With FUZZY_VALUE added as a primitive type (type 10),
+   these type codes are shifted up by 1 when FUZZY_DEFTEMPLATES is on */
+#if FUZZY_DEFTEMPLATES
+#define OBJECT_TYPE_CODE               10
+#define PRIMITIVE_TYPE_CODE            11
+#define NUMBER_TYPE_CODE               12
+#define LEXEME_TYPE_CODE               13
+#define ADDRESS_TYPE_CODE              14
+#define INSTANCE_TYPE_CODE             15
+#else
 #define OBJECT_TYPE_CODE                9
 #define PRIMITIVE_TYPE_CODE            10
 #define NUMBER_TYPE_CODE               11
 #define LEXEME_TYPE_CODE               12
 #define ADDRESS_TYPE_CODE              13
 #define INSTANCE_TYPE_CODE             14
+#endif
 
 typedef enum
   {
@@ -172,6 +196,9 @@ typedef enum
    INSTANCE_NAME_BIT = (1 << 8),
    VOID_BIT = (1 << 9),
    BOOLEAN_BIT = (1 << 10),
+#if FUZZY_DEFTEMPLATES
+   FUZZY_VALUE_BIT = (1 << 11),
+#endif
   } CLIPSType;
 
 #define NUMBER_BITS (INTEGER_BIT | FLOAT_BIT)
@@ -197,6 +224,10 @@ typedef enum
 #define INSTANCE_NAME_TYPE              8
 
 #define VOID_TYPE                       9
+
+#if FUZZY_DEFTEMPLATES
+#define FUZZY_VALUE_TYPE               10   /* Fuzzy value primitive type */
+#endif
 
 #define BITMAP_TYPE                    11
 
@@ -253,6 +284,32 @@ typedef enum
 #define INTEGER_OR_FLOAT              180
 #define SYMBOL_OR_STRING              181
 #define INSTANCE_OR_INSTANCE_NAME     182
+
+/*******************************************/
+/* FUZZY REASONING and CERTAINTY FACTORS   */
+/*     (Added at NRCC for FuzzyCLIPS)      */
+/*******************************************/
+
+#if FUZZY_DEFTEMPLATES
+
+#define SCALL_PN_FUZZY_VALUE           120
+#define SINGLETON_EXPRESSION           121
+#define S_FUNCTION                     122
+#define Z_FUNCTION                     123
+#define PI_FUNCTION                    124
+
+#define PRIMARY_TERM                   201
+#define MODIFIER                       202
+
+#define CRISP_LHS                      219
+#define FUZZY_LHS                      220
+
+#define MAXMIN  1
+#define MAXPROD 2
+
+#define FUZZY_TOLERANCE     0.00000001
+
+#endif /* FUZZY_DEFTEMPLATES */
 
 /*************************/
 /* Macintosh Definitions */

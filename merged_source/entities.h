@@ -26,12 +26,15 @@
 
 #define _H_entities
 
+struct fuzzy_value; /* Forward declaration for FuzzyCLIPS */
+
 typedef struct clipsVoid CLIPSVoid;
 typedef struct clipsLexeme CLIPSLexeme;
 typedef struct clipsFloat CLIPSFloat;
 typedef struct clipsInteger CLIPSInteger;
 typedef struct clipsBitMap CLIPSBitMap;
 typedef struct clipsExternalAddress CLIPSExternalAddress;
+typedef struct clipsFuzzyValue CLIPSFuzzyValue;
 typedef struct typeHeader TypeHeader;
 
 typedef struct multifield Multifield;
@@ -153,6 +156,22 @@ struct clipsExternalAddress
    unsigned short type;
   };
 
+/********************/
+/* clipsFuzzyValue  */
+/*  (FuzzyCLIPS)    */
+/********************/
+struct clipsFuzzyValue
+  {
+   TypeHeader header;
+   CLIPSFuzzyValue *next;
+   long count;
+   unsigned int permanent : 1;
+   unsigned int markedEphemeral : 1;
+   unsigned int neededFuzzyValue : 1;
+   unsigned int bucket : 29;
+   struct fuzzy_value *contents;
+  };
+
 /**************/
 /* clipsValue */
 /**************/
@@ -170,6 +189,7 @@ struct clipsValue
       Fact *factValue;
       Instance *instanceValue;
       CLIPSExternalAddress *externalAddressValue;
+      CLIPSFuzzyValue *fuzzyValue;
      };
   };
 
@@ -203,6 +223,7 @@ struct udfValue
       Fact *factValue;
       Instance *instanceValue;
       CLIPSExternalAddress *externalAddressValue;
+      CLIPSFuzzyValue *fuzzyValue;
      };
    size_t begin;
    size_t range;
