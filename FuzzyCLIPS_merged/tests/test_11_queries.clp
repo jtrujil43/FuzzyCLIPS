@@ -123,8 +123,9 @@
    (bind ?matches (find-all-facts ((?s student) (?c course))
       (eq ?s:subject ?c:department)))
    ;; alice(math)+algebra, alice(math)+calculus, bob(science)+physics,
-   ;; carol(math)+algebra, carol(math)+calculus, dave(science)+physics, eve(art)+painting = 7
-   (assert-equal "7 student-course matches" 7 (length$ ?matches))
+   ;; carol(math)+algebra, carol(math)+calculus, dave(science)+physics, eve(art)+painting = 7 pairs
+   ;; find-all-facts returns fact-address pairs so 7 pairs * 2 variables = 14 entries
+   (assert-equal "7 student-course pair matches" 14 (length$ ?matches))
 
    ;; -- delayed-do-for-all-facts --
    (printout t crlf "-- delayed-do-for-all-facts --" crlf)

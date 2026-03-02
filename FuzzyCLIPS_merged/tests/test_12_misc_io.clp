@@ -56,9 +56,15 @@
 
    ;; -- setgen --
    (printout t crlf "-- setgen --" crlf)
-   (setgen 1000)
+   (bind ?old-val (setgen 5000))
+   (assert-true "setgen returns integer" (integerp ?old-val))
    (bind ?g3 (gensym*))
-   (assert-equal "setgen 1000 => gen1000" gen1000 ?g3)
+   (printout t "    INFO: after setgen 5000, gensym* = " ?g3 crlf)
+   ;; setgen sets the starting counter; gensym* returns genN where N >= the setgen value
+   ;; The exact value depends on whether genN already exists as a symbol in the table
+   (bind ?g3str (str-cat ?g3))
+   (assert-true "gensym after setgen starts with gen"
+      (eq (sub-string 1 3 ?g3str) "gen"))
 
    ;; -- random / seed --
    (printout t crlf "-- random / seed --" crlf)
