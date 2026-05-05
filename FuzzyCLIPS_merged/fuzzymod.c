@@ -41,27 +41,66 @@ static struct modifierListItem *modifierList = NULL;
 void initFuzzyModifierList(
   Environment *theEnv)
 {
-   /* The default modifiers: very, somewhat, more-or-less, etc.
-      In original FuzzyCLIPS these were set up with internal
-      modifier functions. Here we initialize the basic set.
+   /* Initialize the built-in fuzzy modifiers.
+      Each modifier has a name and an associated function that operates
+      on fuzzy_value y-arrays. The modifyFuzzyValue() function in this
+      file handles dispatch to built-in modifiers by name. The modifier
+      list is used for user-defined and some built-in modifiers that
+      need explicit registration.
    */
    modifierList = NULL;
 
-   /* TODO: Port full modifier initialization from original FuzzyCLIPS
-      Default modifiers include:
-       - "not"        -> complement operation
-       - "very"       -> concentration (square the membership values)
-       - "somewhat"   -> dilation (sqrt of membership values)
-       - "more-or-less" -> same as somewhat
-       - "slightly"   -> intensify & complement operations
-       - "extremely"  -> cube of membership values
-       - "above"      -> above a certain point
-       - "below"      -> below a certain point
-       - "intensify"  -> intensification
-       - "norm"       -> normalize
-       - "plus"       -> slightly concentrate
-       - "minus"      -> slightly dilate
-   */
+   /* Register built-in modifiers */
+   AddFuzzyModifier(theEnv, "not", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "very", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "somewhat", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "more-or-less", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "extremely", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "intensify", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "slightly", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "norm", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "plus", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
+   AddFuzzyModifier(theEnv, "minus", NULL, NULL
+#if DEFFUNCTION_CONSTRUCT
+     , NULL
+#endif
+     );
 }
 
 /******************************************************************
@@ -104,6 +143,145 @@ void setModifierList(
   struct modifierListItem *list)
 {
    modifierList = list;
+}
+
+/******************************************************************
+    FindModifier - find a modifier by name (public API)
+ ******************************************************************/
+
+struct modifierListItem *FindModifier(
+  Environment *theEnv,
+  const char *mod_name)
+{
+   return lookupModifier(theEnv, mod_name);
+}
+
+/******************************************************************
+    AddFuzzyModifier - add a modifier to the list
+ ******************************************************************/
+
+int AddFuzzyModifier(
+  Environment *theEnv,
+  const char *name,
+  void (*modfunc)(Environment *, struct fuzzy_value *),
+  struct functionDefinition *modClipsfunc
+#if DEFFUNCTION_CONSTRUCT
+  ,Deffunction *modDeffunc
+#endif
+  )
+{
+   struct modifierListItem *item;
+
+   /* Check if already exists */
+   if (lookupModifier(theEnv, name) != NULL)
+     return 0;
+
+   item = (struct modifierListItem *) genalloc(theEnv,
+            sizeof(struct modifierListItem));
+   item->name = (char *) genalloc(theEnv, strlen(name) + 1);
+   strcpy(item->name, name);
+   item->modfunc = modfunc;
+   item->modClipsfunc = modClipsfunc;
+#if DEFFUNCTION_CONSTRUCT
+   item->modDeffunc = modDeffunc;
+#endif
+   item->next = modifierList;
+   modifierList = item;
+   return 1;
+}
+
+/******************************************************************
+    RemoveFuzzyModifier - remove a modifier from the list
+ ******************************************************************/
+
+void RemoveFuzzyModifier(
+  Environment *theEnv,
+  const char *name)
+{
+   struct modifierListItem *item, *prev;
+
+   prev = NULL;
+   item = modifierList;
+   while (item != NULL)
+     {
+      if (strcmp(item->name, name) == 0)
+        {
+         if (prev == NULL)
+           modifierList = item->next;
+         else
+           prev->next = item->next;
+         genfree(theEnv, item->name, strlen(item->name) + 1);
+         genfree(theEnv, item, sizeof(struct modifierListItem));
+         return;
+        }
+      prev = item;
+      item = item->next;
+     }
+}
+
+/******************************************************************
+    executeModifyFunction - apply a modifier's function to a fuzzy value
+ ******************************************************************/
+
+void executeModifyFunction(
+  Environment *theEnv,
+  struct fuzzy_value *fv,
+  struct modifierListItem *mptr)
+{
+   if (mptr == NULL || fv == NULL) return;
+
+   /* If there's a direct C function pointer, use it */
+   if (mptr->modfunc != NULL)
+     {
+      mptr->modfunc(theEnv, fv);
+      return;
+     }
+
+   /* Otherwise use the built-in name-based dispatch */
+   /* Apply the modifier in-place by modifying y values */
+   if (strcmp(mptr->name, "not") == 0)
+     { fcompliment(theEnv, fv); }
+   else if (strcmp(mptr->name, "very") == 0)
+     { int i; for (i = 0; i < fv->n; i++) fv->y[i] = fv->y[i] * fv->y[i]; }
+   else if (strcmp(mptr->name, "somewhat") == 0 ||
+            strcmp(mptr->name, "more-or-less") == 0)
+     { int i; for (i = 0; i < fv->n; i++) fv->y[i] = sqrt(fv->y[i]); }
+   else if (strcmp(mptr->name, "extremely") == 0)
+     { int i; for (i = 0; i < fv->n; i++) fv->y[i] = fv->y[i] * fv->y[i] * fv->y[i]; }
+   else if (strcmp(mptr->name, "intensify") == 0)
+     {
+      int i; double y;
+      for (i = 0; i < fv->n; i++)
+        {
+         y = fv->y[i];
+         if (y <= 0.5) fv->y[i] = 2.0 * y * y;
+         else fv->y[i] = 1.0 - 2.0 * (1.0 - y) * (1.0 - y);
+        }
+     }
+   else if (strcmp(mptr->name, "slightly") == 0)
+     {
+      int i; double y;
+      /* slightly = intensify(complement(x)) */
+      for (i = 0; i < fv->n; i++) fv->y[i] = 1.0 - fv->y[i];
+      for (i = 0; i < fv->n; i++)
+        {
+         y = fv->y[i];
+         if (y <= 0.5) fv->y[i] = 2.0 * y * y;
+         else fv->y[i] = 1.0 - 2.0 * (1.0 - y) * (1.0 - y);
+        }
+     }
+   else if (strcmp(mptr->name, "norm") == 0)
+     {
+      int i; double maxY = 0.0;
+      for (i = 0; i < fv->n; i++)
+        if (fv->y[i] > maxY) maxY = fv->y[i];
+      if (maxY > 0.0)
+        for (i = 0; i < fv->n; i++) fv->y[i] = fv->y[i] / maxY;
+     }
+   else if (strcmp(mptr->name, "plus") == 0)
+     { int i; for (i = 0; i < fv->n; i++) fv->y[i] = pow(fv->y[i], 1.25); }
+   else if (strcmp(mptr->name, "minus") == 0)
+     { int i; for (i = 0; i < fv->n; i++) fv->y[i] = pow(fv->y[i], 0.75); }
 }
 
 /******************************************************************

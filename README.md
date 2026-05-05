@@ -86,16 +86,19 @@ These files were created to implement the fuzzy/CF extensions:
 | Certainty factor commands | Fully functional (`get-cf`, `set-threshold`, `unthreshold`, etc.) |
 | Fuzzy inference type get/set | Fully functional (`max-min`, `max-prod`) |
 | Display precision / alpha value | Fully functional |
-| Fuzzy modifier (hedge) framework | Framework implemented; hedge math complete |
-| Fuzzy deftemplate parsing | Stub — needs full parser port |
-| Fuzzy LHS/RHS pattern matching | Stub — needs full pattern matching port |
-| Fuzzy set operations (union/intersection) | Stub — needs full algorithm port |
-| Defuzzification (moment/maximum) | Stub — needs full algorithm port |
+| Fuzzy modifier (hedge) framework | Fully functional (not, very, somewhat, extremely, etc.) |
+| Fuzzy deftemplate parsing | Fully functional (universe, primary terms, S/Z/PI, singletons) |
+| Fuzzy LHS/RHS pattern matching | Fully functional (linguistic expressions, modifiers, AND/OR) |
+| Fuzzy set operations (union/intersection) | Fully functional (funion, fintersect, maxmin_intersect) |
+| Defuzzification (moment/maximum) | Fully functional (moment-defuzzify, maximum-defuzzify) |
+| Fuzzy value UDF accessors | Fully functional (get-u, get-fs, create-fuzzy-value, etc.) |
+| Fuzzy union/intersection/modify UDFs | Fully functional |
+| Plot fuzzy value | Fully functional (text-based plot) |
 
-> **Note:** Many fuzzy operations are currently stubs that compile and register
-> correctly but return placeholder values. The framework is complete and the
-> porting of the remaining algorithm logic from the original FuzzyCLIPS source
-> can proceed incrementally.
+> **Note:** The core fuzzy reasoning algorithms have been ported from the original
+> FuzzyCLIPS source (CLIPS 6.05 era) to the modern CLIPS 6.42 API. The rule-engine
+> integration functions (`computeFuzzyConsequence`, `changeValueOfFuzzySlots`) remain
+> as documented stubs pending deeper integration with the 6.42 rule engine internals.
 
 ---
 

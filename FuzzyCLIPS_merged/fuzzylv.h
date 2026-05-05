@@ -61,7 +61,7 @@ struct fuzzyLv
 /******************************************************************/
 struct primary_term
   {
-   struct CLIPSFuzzyValue *fuzzy_value_description;
+   CLIPSFuzzyValue *fuzzy_value_description;
    struct primary_term *next;
   };
 

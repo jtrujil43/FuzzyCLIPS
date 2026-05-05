@@ -58,6 +58,13 @@ struct modifierListItem
                                                   );
    void                          RemoveFuzzyModifier(Environment *,const char *);
    struct modifierListItem       *FindModifier(Environment *,const char *mod_name);
+   struct modifierListItem       *lookupModifier(Environment *,const char *);
+   struct modifierListItem       *getModifierList(Environment *);
+   void                          setModifierList(Environment *,struct modifierListItem *);
+   struct fuzzy_value            *modifyFuzzyValue(Environment *,const char *,struct fuzzy_value *);
+   struct fuzzy_value            *concentrateFuzzyValue(Environment *,struct fuzzy_value *);
+   struct fuzzy_value            *dilateFuzzyValue(Environment *,struct fuzzy_value *);
+   struct fuzzy_value            *intensifyFuzzyValue(Environment *,struct fuzzy_value *);
 
 #endif /* FUZZY_DEFTEMPLATES */
 
