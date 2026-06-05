@@ -201,8 +201,12 @@ void InitializeFacts(
       };
 
    Fact dummyFact = { { { { FACT_ADDRESS_TYPE } , NULL, NULL, 0, 0L } },
-                      NULL, NULL, -1L, 0, 1,
-                      NULL, NULL, NULL, NULL, NULL, 
+                      NULL, NULL, -1L, 0,
+#if CERTAINTY_FACTORS
+                      1.0,
+#endif
+                      1,
+                      NULL, NULL, NULL, NULL, NULL,
                       { {MULTIFIELD_TYPE } , 1, 0UL, NULL, { { { NULL } } } } };
 
    AllocateEnvironmentData(theEnv,FACTS_DATA,sizeof(struct factsData),DeallocateFactData);
