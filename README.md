@@ -104,36 +104,55 @@ These files were created to implement the fuzzy/CF extensions:
 
 ## Prerequisites
 
-- **GCC** (or compatible C99 compiler)
+- **GCC** or Clang (any C99 compiler)
 - **GNU Make**
-- **Linux / WSL** (tested on Ubuntu under WSL2)
+- A **POSIX shell** (for `./configure` and the test runner)
+- **Linux** or **macOS** (the platform is auto-detected; also builds under WSL)
 
 ## Building
 
+FuzzyCLIPS uses a standard configure / make / test / install flow:
+
 ```bash
-cd /home/jovan/devel/Clips_code/FuzzyCLIPS_merged
-make clean
-make -j$(nproc)
+./configure          # detect the platform and write config.mk
+make                 # build the fuzzyclips binary and libclips.a
+make test            # build (if needed) and run the unit-test suite
+sudo make install    # install under the prefix (default /usr/local)
 ```
 
-This produces:
+`make` produces:
 - `fuzzyclips` — the interactive console binary
-- `libclips.a` — static library
+- `libclips.a` — the static library
 
-### Build Options
+`make install` installs the binary to `$(bindir)`, the library to `$(libdir)`,
+and the public headers to `$(includedir)` (`<prefix>/include/fuzzyclips`).
+`make uninstall` removes them again, `make clean` deletes build products, and
+`make distclean` additionally removes the generated `config.mk`.
 
-The makefile uses these defaults:
-```
-CC = gcc
-CFLAGS = -std=c99 -O3 -fno-strict-aliasing -Wall ...
-```
+### Configure Options
 
-To build in debug mode, edit the makefile or override:
+Run `./configure --help` for the full list. The most common options:
+
+| Option | Effect |
+|---|---|
+| `--prefix=DIR` | Installation prefix (default `/usr/local`) |
+| `--bindir=DIR` / `--libdir=DIR` / `--includedir=DIR` | Fine-grained install paths |
+| `--enable-debug` | Build unoptimized with `-O0 -g` (default is `-O3` release) |
+| `--enable-cpp` | Compile the sources as C++ (`g++ -std=c++11`) |
+| `CC=...`, `CFLAGS=...`, `CPPFLAGS=...`, `LDFLAGS=...` | Override the compiler / flags |
+
+Examples:
 ```bash
-make CFLAGS="-std=c99 -O0 -g -DLINUX"
+./configure --prefix=/opt/fuzzyclips     # install elsewhere
+./configure --enable-debug               # debug build
+./configure CC=clang                     # use a different compiler
+make install DESTDIR=/tmp/stage          # staged install (for packaging)
 ```
 
-To disable fuzzy or CF extensions at compile time, edit `setup.h`:
+The platform (`LINUX` / `DARWIN`) is detected automatically via `uname`.
+
+To disable the fuzzy or certainty-factor extensions at compile time, set the
+flags in `setup.h` and rebuild:
 ```c
 #define FUZZY_DEFTEMPLATES 0   /* disable fuzzy support */
 #define CERTAINTY_FACTORS  0   /* disable CF support */
@@ -186,22 +205,35 @@ FuzzyCLIPS> (get-cf 1)
 
 ## Unit Tests
 
-The `tests/` directory contains 5 test suites with 64 test cases covering core
-CLIPS functionality and the fuzzy/CF extensions.
+The `tests/` directory contains 15 test suites with 199 test cases covering core
+CLIPS functionality and the fuzzy / certainty-factor extensions. The easiest way
+to run them is `make test`, which builds the binary first if necessary.
 
 ### Test Suites
 
-| File | Tests | Description |
-|---|---|---|
-| `test_01_basic.clp` | 21 | Math, strings, type predicates, lists, fact system |
-| `test_02_rules.clp` | 6 | Rule firing, salience, pattern matching, rule chaining |
-| `test_03_fuzzy_commands.clp` | 13 | Fuzzy inference type, display precision, alpha value, CF threshold, UDF registration |
-| `test_04_certainty_factors.clp` | 6 | `get-cf`, `set-threshold`, `unthreshold`, rule-based CF |
-| `test_05_constructs.clp` | 18 | Deftemplate, deffacts, defglobal, deffunction, defrule, modify, query functions |
+| File | Focus |
+|---|---|
+| `test_01_basic.clp` | Math, strings, type predicates, lists, fact system |
+| `test_02_rules.clp` | Rule firing, salience, pattern matching, rule chaining |
+| `test_03_fuzzy_commands.clp` | Fuzzy inference type, display precision, alpha value, UDF registration |
+| `test_04_certainty_factors.clp` | `get-cf`, `set-threshold`, `unthreshold`, rule-based CF |
+| `test_05_constructs.clp` | Deftemplate, deffacts, defglobal, deffunction, defrule, modify, queries |
+| `test_06_procedural.clp` | Procedural functions, control flow, variable binding |
+| `test_07_math.clp` | Arithmetic, trigonometric and numeric functions |
+| `test_08_strings.clp` | String manipulation and predicates |
+| `test_09_multifield.clp` | Multifield creation, slicing and functions |
+| `test_10_cool.clp` | COOL — classes, instances, message passing |
+| `test_11_queries.clp` | Fact- and instance-set query functions |
+| `test_12_misc_io.clp` | I/O routers, formatting and miscellaneous commands |
+| `test_13_generics.clp` | Generic functions and method dispatch |
+| `test_14_fuzzy_deep.clp` | In-depth fuzzy deftemplates, sets and defuzzification |
+| `test_15_cf_scenarios.clp` | End-to-end certainty-factor reasoning scenarios |
 
 ### Running All Tests
 
 ```bash
+make test                    # preferred: builds first, then runs the suite
+# or, if the binary is already built:
 bash tests/run_all_tests.sh
 ```
 
@@ -223,8 +255,8 @@ Running: test_01_basic.clp
 ============================================
  OVERALL RESULTS
 ============================================
- Test suites: 5 passed, 0 failed
- Test cases:  64 passed, 0 failed
+ Test suites: 15 passed, 0 failed
+ Test cases:  199 passed, 0 failed
 ============================================
 
 ALL SUITES PASSED
@@ -241,31 +273,31 @@ ALL SUITES PASSED
 ## Directory Structure
 
 ```
-FuzzyCLIPS_merged/
+.
+├── configure              # Generates config.mk (run this first)
+├── Makefile               # Build system (includes config.mk)
+├── makefile.win           # Native Windows (nmake) build
+├── config.mk              # Generated by ./configure (git-ignored)
 ├── README.md              # This file
-├── makefile               # Build system
 ├── main.c                 # Entry point
-├── fuzzyclips             # Built binary
-├── libclips.a             # Built static library
 ├── setup.h                # Compile-time config (FUZZY_DEFTEMPLATES, CERTAINTY_FACTORS)
-├── *.c / *.h              # CLIPS 6.42 core source (~167 files)
+├── *.c / *.h              # CLIPS 6.42 core source
 ├── fuzzyval.h             # Fuzzy value struct definition
 ├── fuzzylv.h              # Fuzzy linguistic variable struct
 ├── fuzzydef.c/h           # Fuzzy initialization
-├── fuzzycom.c/h           # Fuzzy UDF commands (~25 registered)
+├── fuzzycom.c/h           # Fuzzy UDF commands
 ├── fuzzyutl.c/h           # Fuzzy utility functions
 ├── fuzzypsr.c/h           # Fuzzy parser, S/Z/PI curves
 ├── fuzzylhs.c/h           # Fuzzy LHS pattern matching
 ├── fuzzyrhs.c/h           # Fuzzy RHS value handling
 ├── fuzzymod.c/h           # Fuzzy modifiers (hedges)
 ├── cfdef.c/h              # Certainty factor commands
-└── tests/
-    ├── run_all_tests.sh   # Test runner script
+├── Docs/                  # CLIPS and FuzzyCLIPS manuals (PDF/DOC)
+└── tests/                 # Unit-test suites + run_all_tests.sh
+    ├── run_all_tests.sh
     ├── test_01_basic.clp
-    ├── test_02_rules.clp
-    ├── test_03_fuzzy_commands.clp
-    ├── test_04_certainty_factors.clp
-    └── test_05_constructs.clp
+    ├── ...
+    └── test_15_cf_scenarios.clp
 ```
 
 ---

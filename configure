@@ -1,0 +1,217 @@
+#!/bin/sh
+# configure -- portable configuration script for FuzzyCLIPS.
+#
+# This is a lightweight, hand-written replacement for GNU Autoconf.  It needs
+# only a POSIX shell and no external tooling.  It inspects the host, selects a
+# compiler and flags, and writes config.mk, which the Makefile includes.
+#
+# Usage:  ./configure [OPTION]... [VAR=VALUE]...
+# then:   make && make test && make install
+
+set -eu
+
+package="FuzzyCLIPS"
+version="6.42a"
+
+# ---- Defaults ------------------------------------------------------------
+prefix="/usr/local"
+exec_prefix=""
+bindir=""
+libdir=""
+includedir=""
+datarootdir=""
+docdir=""
+
+build="release"     # release | debug
+lang="c"            # c | c++
+
+CC="${CC:-}"
+CFLAGS="${CFLAGS:-}"
+CPPFLAGS="${CPPFLAGS:-}"
+LDFLAGS="${LDFLAGS:-}"
+AR="${AR:-ar}"
+
+usage () {
+  cat <<EOF
+Usage: ./configure [OPTION]... [VAR=VALUE]...
+
+Configure $package $version and generate config.mk.
+
+Installation directories:
+  --prefix=PREFIX         install architecture-independent files in PREFIX
+                          [/usr/local]
+  --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
+                          [PREFIX]
+  --bindir=DIR            user executables            [EPREFIX/bin]
+  --libdir=DIR            object-code libraries       [EPREFIX/lib]
+  --includedir=DIR        C header files              [PREFIX/include/fuzzyclips]
+  --docdir=DIR            documentation root          [PREFIX/share/doc/fuzzyclips]
+
+Build options:
+  --enable-debug          build unoptimized with -O0 -g            [no]
+  --disable-debug         build optimized release                  [default]
+  --enable-cpp            compile the sources as C++ (mirrors the
+                          historical *_cpp make targets)           [no]
+  --help, -h              display this help and exit
+
+Influential variables (may also be passed as VAR=VALUE arguments):
+  CC          C (or C++) compiler command
+  CFLAGS      extra compiler flags (appended after the defaults)
+  CPPFLAGS    preprocessor flags (e.g. -I<dir> -D<macro>)
+  LDFLAGS     linker flags (e.g. -L<dir>)
+  AR          static-library archiver                             [ar]
+
+Examples:
+  ./configure
+  ./configure --prefix=/opt/fuzzyclips CC=clang
+  ./configure --enable-debug
+EOF
+}
+
+# ---- Argument parsing ----------------------------------------------------
+for arg in "$@"; do
+  case "$arg" in
+    --prefix=*)      prefix=${arg#*=} ;;
+    --exec-prefix=*) exec_prefix=${arg#*=} ;;
+    --bindir=*)      bindir=${arg#*=} ;;
+    --libdir=*)      libdir=${arg#*=} ;;
+    --includedir=*)  includedir=${arg#*=} ;;
+    --docdir=*)      docdir=${arg#*=} ;;
+    --datarootdir=*) datarootdir=${arg#*=} ;;
+    --enable-debug)  build=debug ;;
+    --disable-debug) build=release ;;
+    --enable-cpp)    lang=c++ ;;
+    --disable-cpp)   lang=c ;;
+    --help|-h)       usage; exit 0 ;;
+    CC=*)            CC=${arg#*=} ;;
+    CFLAGS=*)        CFLAGS=${arg#*=} ;;
+    CPPFLAGS=*)      CPPFLAGS=${arg#*=} ;;
+    LDFLAGS=*)       LDFLAGS=${arg#*=} ;;
+    AR=*)            AR=${arg#*=} ;;
+    *) echo "configure: error: unrecognized option: $arg" >&2
+       echo "Try './configure --help' for more information." >&2
+       exit 1 ;;
+  esac
+done
+
+# ---- Derive installation directories -------------------------------------
+: "${exec_prefix:=$prefix}"
+: "${bindir:=$exec_prefix/bin}"
+: "${libdir:=$exec_prefix/lib}"
+: "${includedir:=$prefix/include/fuzzyclips}"
+: "${datarootdir:=$prefix/share}"
+: "${docdir:=$datarootdir/doc/fuzzyclips}"
+
+# ---- Platform / OS detection ---------------------------------------------
+uname_s=$(uname -s 2>/dev/null || echo unknown)
+case "$uname_s" in
+  Darwin) clips_os=DARWIN ;;
+  Linux)  clips_os=LINUX ;;
+  *)      clips_os=LINUX
+          echo "configure: warning: unrecognized OS '$uname_s'; defaulting CLIPS_OS=LINUX" >&2 ;;
+esac
+
+# ---- Compiler selection --------------------------------------------------
+if [ -z "$CC" ]; then
+  if [ "$lang" = "c++" ]; then CC=g++; else CC=gcc; fi
+fi
+if ! command -v "$CC" >/dev/null 2>&1; then
+  echo "configure: error: compiler '$CC' not found in PATH" >&2
+  exit 1
+fi
+
+# Sanity-check that the compiler can build a trivial program.
+conftest_c="conftest_$$.c"
+conftest_o="conftest_$$.out"
+printf 'int main(void){return 0;}\n' > "$conftest_c"
+if ! "$CC" -o "$conftest_o" "$conftest_c" >/dev/null 2>&1; then
+  rm -f "$conftest_c" "$conftest_o"
+  echo "configure: error: '$CC' cannot compile a trivial program" >&2
+  exit 1
+fi
+rm -f "$conftest_c" "$conftest_o"
+
+# ---- Compiler flags ------------------------------------------------------
+if [ "$lang" = "c++" ]; then
+  std_flags="-x c++ -std=c++11"
+  ldlibs=""                       # libstdc++ already supplies the math routines
+else
+  std_flags="-std=c99"
+  ldlibs="-lm"
+fi
+
+if [ "$build" = "debug" ]; then
+  opt_flags="-O0 -g"
+else
+  opt_flags="-O3 -fno-strict-aliasing"
+fi
+
+if [ "$clips_os" = "DARWIN" ]; then
+  warnings="-Wall -Wundef -Wpointer-arith -Wshadow -Wstrict-aliasing -Winline -Wmissing-declarations -Wredundant-decls -Wmissing-prototypes -Wnested-externs -Wstrict-prototypes -Waggregate-return -Wno-implicit"
+else
+  warnings="-Wall -Wundef -Wpointer-arith -Wshadow -Wstrict-aliasing -Winline -Wredundant-decls -Waggregate-return"
+fi
+if [ "$lang" = "c++" ] && [ "$clips_os" = "DARWIN" ]; then
+  warnings="$warnings -Wcast-qual"
+fi
+
+cflags_all="$std_flags $opt_flags"
+if [ -n "$CFLAGS" ]; then cflags_all="$cflags_all $CFLAGS"; fi
+
+# ---- Emit config.mk ------------------------------------------------------
+cat > config.mk <<EOF
+# config.mk -- generated by ./configure on $(date)
+#
+# DO NOT EDIT.  Re-run ./configure to regenerate (edit ./configure instead).
+#
+# $package $version
+#   Build type : $build
+#   Language   : $lang
+#   Target OS  : $clips_os
+
+CC          = $CC
+AR          = $AR
+CLIPS_OS    = $clips_os
+BUILD       = $build
+LANG_MODE   = $lang
+
+CPPFLAGS    = $CPPFLAGS
+CFLAGS      = $cflags_all
+WARNINGS    = $warnings
+LDFLAGS     = $LDFLAGS
+LDLIBS      = $ldlibs
+
+# Installation directories
+prefix      = $prefix
+exec_prefix = $exec_prefix
+bindir      = $bindir
+libdir      = $libdir
+includedir  = $includedir
+datarootdir = $datarootdir
+docdir      = $docdir
+EOF
+
+# ---- Summary -------------------------------------------------------------
+cat <<EOF
+
+$package $version configured.
+
+  Build type ......... $build
+  Language ........... $lang
+  Target OS .......... $clips_os
+  Compiler (CC) ...... $CC
+  CFLAGS ............. $cflags_all
+  LDLIBS ............. $ldlibs
+
+  prefix ............. $prefix
+  bindir ............. $bindir
+  libdir ............. $libdir
+  includedir ......... $includedir
+
+Wrote config.mk.  Now run:
+
+  make            # build the fuzzyclips binary and libclips.a
+  make test       # build (if needed) and run the unit-test suite
+  make install    # install under the prefix above (use sudo if required)
+
+EOF

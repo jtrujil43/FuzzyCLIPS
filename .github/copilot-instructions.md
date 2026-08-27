@@ -2,29 +2,36 @@
 
 ## Project Overview
 
-FuzzyCLIPS 6.42a merges the original FuzzyCLIPS fuzzy-logic extensions (from CLIPS 6.05/6.10 era, ~1997–2004) onto the modern **CLIPS 6.42** codebase (2025). The active development directory is `FuzzyCLIPS_merged/`.
+FuzzyCLIPS 6.42a merges the original FuzzyCLIPS fuzzy-logic extensions (from CLIPS 6.05/6.10 era, ~1997–2004) onto the modern **CLIPS 6.42** codebase (2025). The single, buildable source tree lives at the repository root.
 
 ## Build Commands
 
-```bash
-cd FuzzyCLIPS_merged
+The project uses a `./configure` + `make` flow (build config lives in the
+generated `config.mk`, which is git-ignored):
 
-make clean && make          # Release build (GCC, C99, -O3)
-make debug                  # Debug build (-O0 -g)
-make debug_cpp              # C++ debug build (g++, C++11)
-make release_cpp            # C++ release build
+```bash
+./configure                 # Detect platform, write config.mk (default: release)
+make                        # Build fuzzyclips binary + libclips.a
+make test                   # Build (if needed) and run the unit-test suite
+make install                # Install under the prefix (default /usr/local)
+
+./configure --enable-debug  # Debug build (-O0 -g)
+./configure --enable-cpp    # Compile as C++ (g++, C++11)
+make clean                  # Remove build products
+make distclean              # Also remove config.mk
 ```
 
-Produces `fuzzyclips` binary and `libclips.a`. Requires GCC with C99 and GNU Make. Links `-lm`.
+Produces `fuzzyclips` binary and `libclips.a`. Requires a C99 compiler (GCC/Clang),
+GNU Make and a POSIX shell. Links `-lm`. Run `./configure --help` for all options.
 
 On Windows: `nmake -f makefile.win`
 
 ## Running Tests
 
 ```bash
-cd FuzzyCLIPS_merged/tests
-bash run_all_tests.sh               # Run all test suites
-../fuzzyclips -f test_03_fuzzy_commands.clp  # Run a single test suite
+make test                                        # Build + run all suites (preferred)
+bash tests/run_all_tests.sh                      # Run all suites directly
+./fuzzyclips -f tests/test_03_fuzzy_commands.clp  # Run a single suite
 ```
 
 Tests are `.clp` files that print PASS/FAIL lines and a `--- Results:` summary. The runner parses these to report overall status.
@@ -33,9 +40,8 @@ Tests are `.clp` files that print PASS/FAIL lines and a `--- Results:` summary. 
 
 ### Directory Layout
 
-- **`FuzzyCLIPS_merged/`** — The canonical, buildable source tree (CLIPS 6.42 + fuzzy extensions)
-- **`source/`** — Legacy FuzzyCLIPS source (CLIPS 6.05/6.10 era, reference only)
-- **`merged_source/`** — Clean CLIPS 6.42 source without fuzzy extensions (for diffing)
+- **Repository root** — The single canonical, buildable source tree (CLIPS 6.42 + fuzzy extensions): `*.c` / `*.h`, `main.c`, `setup.h`, plus `configure` and `Makefile`
+- **`tests/`** — Unit-test suites (`test_*.clp`) and `run_all_tests.sh`
 - **`Docs/`** — PDF/DOC manuals for both CLIPS and FuzzyCLIPS
 
 ### Feature Flag Architecture
@@ -99,4 +105,4 @@ All headers use `#pragma once` plus traditional `#ifndef _H_name` / `#define _H_
 
 ### Compiler Flags
 
-The makefile passes `-D$(CLIPS_OS)` (either `LINUX` or `DARWIN`) at compile time. Platform detection is automatic via `uname -s`.
+`./configure` detects the platform via `uname -s` and records `CLIPS_OS` (either `LINUX` or `DARWIN`) in `config.mk`; the Makefile's compile rule passes it as `-D$(CLIPS_OS)`. Edit `./configure` (not the generated `config.mk`) to change build defaults.
