@@ -24,8 +24,6 @@ make distclean              # Also remove config.mk
 Produces `fuzzyclips` binary and `libclips.a`. Requires a C99 compiler (GCC/Clang),
 GNU Make and a POSIX shell. Links `-lm`. Run `./configure --help` for all options.
 
-On Windows: `nmake -f makefile.win`
-
 ## Running Tests
 
 ```bash
@@ -40,7 +38,8 @@ Tests are `.clp` files that print PASS/FAIL lines and a `--- Results:` summary. 
 
 ### Directory Layout
 
-- **Repository root** — The single canonical, buildable source tree (CLIPS 6.42 + fuzzy extensions): `*.c` / `*.h`, `main.c`, `setup.h`, plus `configure` and `Makefile`
+- **`src/`** — All CLIPS 6.42 + fuzzy-extension C sources and headers (`*.c` / `*.h`, including `main.c` and `setup.h`)
+- **Repository root** — Build scripts (`configure`, `Makefile`) and the generated `config.mk`
 - **`tests/`** — Unit-test suites (`test_*.clp`) and `run_all_tests.sh`
 - **`Docs/`** — PDF/DOC manuals for both CLIPS and FuzzyCLIPS
 
